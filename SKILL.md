@@ -1,6 +1,7 @@
 ---
 name: address-findings
 description: Fixes the CRITICAL and HIGH findings in a consistent-code-review report for one pull request, staying inside the files that PR already changes, then reports each finding as fixed, won't fix (with evidence) or escalate. Use whenever someone asks to address, fix or resolve the review findings, blocking comments or CRITICAL/HIGH issues on a PR and a review-report.json exists for it, even if they never say "findings", or when the pr-graph conductor calls the fixer node. Not for writing a review (use consistent-code-review), adding features, rebasing for conflicts, or merging (merge_gate.py decides that).
+version: 0.1.0
 ---
 
 # address-findings
