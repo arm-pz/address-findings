@@ -4,7 +4,7 @@ An agent skill that fixes the CRITICAL and HIGH findings from a
 [consistent-code-review](https://github.com/arm-pz/consistent-code-review) report on one pull request.
 It only edits files the PR already changes, makes one commit per finding, and reports each finding
 as **fixed**, **won't fix** (with evidence) or **escalate**. It never merges, never force-pushes,
-and escalates instead of pushing on fork PRs.
+and escalates when it can't write to the PR's head repository.
 
 It is the fixer node in a review → fix → re-review → merge-gate graph.
 
@@ -31,7 +31,7 @@ It needs a `review-report.json` for the PR; without one, run consistent-code-rev
 
 ## Test results
 
-- Version 0.1.0: 0 pass, 0 fail, 11 reviewed-only, 0 not run. Read-through of the description only; no live-session run.
+- Version 0.2.0: 0 pass, 0 fail, 11 reviewed-only, 0 not run. Read-through of the description only; no live-session run.
 
 ## Version
 
