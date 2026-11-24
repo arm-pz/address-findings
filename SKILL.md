@@ -1,6 +1,6 @@
 ---
 name: address-findings
-description: Fixes the CRITICAL and HIGH findings in a consistent-code-review report for one pull request, staying inside the files that PR already changes, then reports each finding as fixed, won't fix (with evidence) or escalate. Use when a review-report.json exists for a PR and its blocking findings need addressing, or when the pr-graph conductor calls the fixer node. Not for writing a review (use consistent-code-review), adding features, rebasing for conflicts, or merging (merge_gate.py decides that).
+description: Fixes the CRITICAL and HIGH findings in a consistent-code-review report for one pull request, staying inside the files that PR already changes, then reports each finding as fixed, won't fix (with evidence) or escalate. Use whenever someone asks to address, fix or resolve the review findings, blocking comments or CRITICAL/HIGH issues on a PR and a review-report.json exists for it, even if they never say "findings", or when the pr-graph conductor calls the fixer node. Not for writing a review (use consistent-code-review), adding features, rebasing for conflicts, or merging (merge_gate.py decides that).
 ---
 
 # address-findings
@@ -17,13 +17,15 @@ Fix what the review found, nothing more. An honest "won't fix" or "escalate" is 
 
 ## Inputs
 
+The examples below use the skills-site layout. Get `<owner>/<repo>` with `gh repo view --json nameWithOwner --jq .nameWithOwner` and use the paths your repo has. If a schema file below is missing, say so and ask for it. Don't invent the report shape.
+
 - `review-report.json` for this PR, valid against `tools/pr-graph/schemas/review-report.schema.json`.
 - The round number from the conductor (1 to 3).
 
 ## Steps
 
-1. **Check the review is current.** Run `gh api repos/arm-pz/skills-site/pulls/<n> --jq .head.sha`. If it isn't the report's `head_sha`, stop with "stale review" and return no fix report.
-2. **Check out the PR head in a worktree:** `git fetch origin pull/<n>/head:pr-<n>` then `git worktree add <scratch>/pr-<n> pr-<n>`. List the PR's changed files with `gh api --paginate repos/arm-pz/skills-site/pulls/<n>/files --jq '.[].filename'`. Compare that count, before adding anything else, with `gh api repos/arm-pz/skills-site/pulls/<n> --jq .changed_files`. If they differ, stop and escalate every finding with "incomplete file list". GitHub lists at most 3,000 files. Then add each renamed file's old path (`.previous_filename`) to the PR's files for the scope check.
+1. **Check the review is current.** Run `gh api repos/<owner>/<repo>/pulls/<n> --jq .head.sha`. If it isn't the report's `head_sha`, stop with "stale review" and return no fix report.
+2. **Check out the PR head in a worktree:** `git fetch origin pull/<n>/head:pr-<n>` then `git worktree add <scratch>/pr-<n> pr-<n>`. List the PR's changed files with `gh api --paginate repos/<owner>/<repo>/pulls/<n>/files --jq '.[].filename'`. Compare that count, before adding anything else, with `gh api repos/<owner>/<repo>/pulls/<n> --jq .changed_files`. If they differ, stop and escalate every finding with "incomplete file list". GitHub lists at most 3,000 files. Then add each renamed file's old path (`.previous_filename`) to the PR's files for the scope check.
 3. **Take a baseline.** Run the repo's PR check: `python -m unittest discover -s tools/agent-skills/tests` plus the three `--check` commands in `.github/workflows/publish.yml`. If the baseline is already red, stop and escalate every finding with "red before fixing".
 4. **For each finding, CRITICAL first, then HIGH, in ID order:**
     1. Confirm it in the code: reproduce it, or show the line does what the finding says. If it's not real, mark `wont_fix` with the evidence, such as a test you ran or the line that disproves it.
@@ -31,7 +33,7 @@ Fix what the review found, nothing more. An honest "won't fix" or "escalate" is 
     3. Make the smallest change that fixes it. Add or extend a test that fails without the fix when one fits.
     4. Run the baseline commands again. If anything newly fails, run `git checkout -- .` to drop this fix and mark `escalate` with the failing test.
     5. Commit with the message `fix(<id>): <one line>` and record the short SHA.
-5. **Push the commits to the PR's own branch**, never with force. If the push is rejected, run `git pull --rebase` on that branch once and retry. If it fails again, mark the remaining fixed items `escalate` with "push rejected".
+5. **Push the commits to the PR's own branch**, never with force: `git push origin HEAD:<headRefName>`, where the name comes from `gh pr view <n> --json headRefName,isCrossRepository`. If the PR is from a fork, don't push: mark every fixed item `escalate` with "fork PR" and give the commit SHAs. If the push is rejected, run `git pull --rebase` on that branch once and retry. If it fails again, mark the remaining fixed items `escalate` with "push rejected".
 6. **Write `fix-report.json`** next to the review report, valid against `tools/pr-graph/schemas/fix-report.schema.json`. It needs one result per CRITICAL or HIGH finding, and `new_head_sha` set to the pushed head.
 7. **Comment once on the PR**, using a table of id, status, commit and note. Then remove the worktree.
 
